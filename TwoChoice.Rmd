@@ -1,0 +1,173 @@
+---
+title: "Feeding Liquid Interaction Counter(FLIC): Two-Choice"
+author: "Kayla Audette"
+date: "December 6, 2023"
+output:
+  html_document:
+    css: styles.css
+---
+
+### 1. R Environment
+
+- **Setting Up Environment:**
+  - The first chunk configures the presentation options for the R code.
+  - It hides the code and result outputs, such as messages and warnings.
+  - The workspace is cleared to remove any existing variables or data.
+  - Essential libraries are loaded for data analysis and visualization.
+  
+- **Loading Directory and Attachments**
+  - The working directory is set to "~/Working Directory," where R will locate and save files.
+  - The "FLICFunctions" data is attached, making its functions accessible for use.
+
+```{r setup, results='hide', message=FALSE, warning=FALSE}
+# Set up options for the R code
+knitr::opts_chunk$set(echo = TRUE)
+
+# Clear the workspace
+rm(list=ls())
+
+# Load necessary libraries
+library(ggplot2)
+library(stats)
+library(gridExtra)
+library(reshape2)
+library(gtools)
+library(dplyr)
+library(tidyverse)
+
+# Set the working directory
+setwd("~/Working Directory")
+
+# Attach the "FLICFunctions" data; assuming it's a global environment object
+attach("FLICFunctions", pos = 2)
+```
+
+
+### 2. Initializing and Displaying Parameters
+
+- **Initializing Parameters:**
+  - Initialization of a parameter set (`p.choice`) using the `ParametersClass.TwoWell()` class.
+  - The `ParametersClass.TwoWell()` function is employed to define a set of parameters relevant to a two-well experimental setup.
+
+- **Displaying Parameters:**
+  - Attributes and parameters within the `p.choice` object are displayed.
+  - The code utilizes `attributes(p.choice)` to provide additional information about the object.
+  - The content of `p.choice` is printed to the console, revealing details such as threshold signal for a lick, duration of an event, etc.
+   
+```{r, message=FALSE, warning=FALSE}
+ # Creates a data set with parameters for the data (e.g., threshold signal for a lick, duration of an event, etc.)
+p.choice <- ParametersClass.TwoWell()
+attributes(p.choice)
+p.choice
+```
+
+
+### 3. Applying Parameters to Data
+
+- **Parameter Initialization:**
+  - Two instances of `ParametersClass.TwoWell()` are created and assigned to `p.choice.one` and `p.choice.two`, defining parameters for a two-well experimental setup.
+
+- **Adjusting `p.choice.two`:**
+  - The `SetParameter()` function modifies parameters for `p.choice.two`, specifically setting `PI.Multiplier` to 1.0.
+  - This adjustment suggests customization for a specific condition or scenario.
+
+- **Monitor Selection:**
+  - A vector, `monitors.choice`, is created with values 1, 2, 3, and 4.
+  - These values likely represent the chosen monitors or data sources for processing with corresponding parameter sets.
+
+- **List of Parameter Objects:**
+  - A list, `p.choice.list`, is constructed with elements `p.choice.two`, `p.choice.one`, `p.choice.two`, and `p.choice.one`.
+  - This list associates specific parameter sets with monitors for subsequent analysis.
+
+```{r,  results='hide', message=FALSE, warning=FALSE}
+# Applies parameters to the raw monitor output data 
+p.choice.one <- ParametersClass.TwoWell()
+p.choice.two <- ParametersClass.TwoWell()
+p.choice.two <- SetParameter(p.choice.two, PI.Multiplier = 1.0)
+monitors.choice <- c(1, 2, 3, 4)
+p.choice.list <- list(p.choice.two, p.choice.one, p.choice.two, p.choice.one)
+```
+
+
+### 4. Creating DFM Objects:
+
+- **Creating DFM Objects:**
+   - Four instances of the `DFMClass` are created and assigned to `dfm_own1`, `dfm_own2`, `dfm_own3`, and `dfm_own4`.
+   - Each instance is associated with a specific monitor (1, 2, 3, or 4), and the same parameter set `p.choice` is passed to each instance.
+
+- **Initialization of DFM Instances:**
+   - The `DFMClass` is presumably a custom function used to define and initialize data frame monitors. It takes two arguments: the monitor number and the parameter set (`p.choice`).
+   - Each `DFMClass` instance is associated with a specific monitor number (1, 2, 3, or 4) and the common parameter set `p.choice`.
+
+```{r,  results='hide', message=FALSE, warning=FALSE}
+# Reads and transforms the parameter monitor data into the intended variable based on the chosen parameters
+dfm_own1 <- DFMClass(1, p.choice)
+dfm_own2 <- DFMClass(2, p.choice)
+dfm_own3 <- DFMClass(3, p.choice)
+dfm_own4 <- DFMClass(4, p.choice)
+```
+
+
+### 5. Combining Monitor Summaries and Exporting
+
+- **Combining Summary Tables:**
+  - A list, `FeedingSummary`, is created to store summary tables for each monitor.
+  - A loop reads raw data from monitor files and generates summary tables using the `Feeding.Summary.Monitors` function.
+  - Each summary table is stored in the `FeedingSummary` list.
+
+- **Processing Each Monitor Summary:**
+  - A function, `process_monitor_summary`, is defined to select specific columns and add a "Genotype" column based on the "Chamber" variable.
+  - The function is applied to each monitor's summary, creating processed summaries.
+
+- **Combining Processed Summaries:**
+  - The processed summaries for each monitor are combined into a single data frame, `combined_results`, using the `do.call(rbind, processed_summaries)` approach.
+
+- **Exporting Combined Results:**
+  - The combined results are written to a CSV file named "All_Monitors_Results.csv" using the `write.csv` function.
+  - The CSV file does not include row names.
+  
+```{r, results='hide', message=FALSE, warning=FALSE}
+# Initialize a list to store summary tables
+FeedingSummary <- list()
+
+# Loop through monitors and create summary tables
+for (i in 1:1) {
+  dfm.own <- get(paste0("dfm_own", i))
+  FeedingSummary[[i]] <- Feeding.Summary.Monitors(monitors.choice, p.choice.list, range=c(5,180), TransformLicks=FALSE)
+}
+
+# Function to Process Monitor Summary
+process_monitor_summary <- function(FeedingSummary, monitor_name) {
+  # Check if FeedingSummary is a list; if not, return an empty data frame
+  if (!is.list(FeedingSummary)) {
+    return(data.frame())
+  }
+
+  # Check if FeedingSummary[[1]] is a data frame; if not, return an empty data frame
+  if (!is.data.frame(FeedingSummary[[1]])) {
+    return(data.frame())
+  }
+
+  # Select the desired columns
+  processed_summary <- FeedingSummary[[1]][, c("DFM", "Chamber", "PI", "LicksA", "LicksB", "EventsA", "EventsB", "MeanDurationA", "MeanDurationB")]
+  
+  # Add the Genotype column
+  processed_summary$Genotype = ifelse(processed_summary$Chamber %% 2 == 1, "Odds", "Evens")
+
+  return(processed_summary)
+}
+
+# Process each monitor's summary individually
+processed_summaries <- lapply(FeedingSummary, process_monitor_summary)
+
+# Create an empty data frame to store the combined results
+combined_results <- data.frame()
+
+# Append the processed results to the combined data frame
+combined_results <- do.call(rbind, processed_summaries)
+
+# Write the combined results to a CSV file
+write.csv(combined_results, "All_Monitors_Results.csv", row.names = FALSE)
+
+```
+
