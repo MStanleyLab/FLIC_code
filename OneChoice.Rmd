@@ -1,0 +1,178 @@
+---
+title: "Feeding Liquid Interaction Counter(FLIC): One Choice"
+author: "Kayla Audette"
+date: "December 6, 2023"
+output:
+  html_document:
+    css: styles.css
+---
+
+### 1. R Environment
+
+- **Setting Up Environment:**
+  - The first chunk configures the presentation options for the R code.
+  - It hides the code and result outputs, such as messages and warnings.
+  - The workspace is cleared to remove any existing variables or data.
+  - Essential libraries are loaded for data analysis and visualization.
+  
+- **Loading Directory and Attachments**
+  - The working directory is set to "~/Working Directory," where R will locate and save files.
+  - The "FLICFunctions" data is attached, making its functions accessible for use.
+
+```{r setup, results='hide', message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Clears workspace
+rm(list=ls())
+
+# Essential libraries
+library(ggplot2)
+library(stats)
+library(reshape2)
+library(tidyverse)
+library(data.table)
+library(english)
+library(gtools)
+
+# Sets the working directing and attaches the programmed FLICFunctions
+setwd("~/Working Directory")
+attach("FLICFunctions",pos=2)
+```
+
+
+### 2. Parameter Initialization and Exploration
+
+- **Initialization of Single-Well Parameters:**
+  - The code initiates a parameter set (`p.single`) using the `ParametersClass.SingleWell()` class, tailored for a single-well experimental configuration.
+  - A vector (`monitors.single`) is defined, enumerating monitor IDs (`1, 2, 3, 4`).
+  - Monitors are explicitly specified, and a list of parameter objects is generated, associating each monitor with the common parameter set `p.single`.
+
+- **Exploration of Parameter Attributes:**
+  - The script explores the attributes and parameters within the `p.single` object.
+  - `attributes(p.single)` is used to reveal additional information about the parameter object.
+  - The content of `p.single` is displayed, offering insights into threshold signals for licks, event durations, and other relevant parameters.
+  
+```{r, message=FALSE, warning=FALSE}
+p.single <- ParametersClass.SingleWell()
+monitors.single <- c(1,2,3,4)
+attributes(p.single)
+p.single
+#p.choice<-SetParameter(p.choice,Feeding.Threshold=30) [example code if you want to alter any of the parameters]
+```
+
+
+### 3. Monitor Data Transformation
+
+- **Transforming Raw Monitor Data:**
+  - Raw monitor data is transformed for each monitor (`dfm.single1` to `dfm.single4`) using the `DFMClass` with specific parameters.
+  - Four instances of the `DFMClass` are created, each associated with a distinct monitor (1 to 4), utilizing the parameter set `p.single`.
+  - This step involves the processing and organization of raw monitor data, preparing it for subsequent analysis.
+  
+```{r, results='hide', message=FALSE, warning=FALSE}
+# Reads and transforms the parameter monitor data into the actually intended variable based on what was chosen (i.e licks, events, event duration etc.)
+dfm.single1 <- DFMClass(1, p.single)
+dfm.single2 <- DFMClass(2, p.single)
+dfm.single3 <- DFMClass(3, p.single)
+dfm.single4 <- DFMClass(4, p.single)
+```
+
+ 
+### 4. Summary Table Creation
+
+- **Initializing List for Summary Tables:**
+  - An empty list (`summary_tables`) is initialized to store summary tables, providing an organized structure for the analysis results.
+
+- **Iterating Through Monitors:**
+  - A loop iterates through monitors (1 to 4), creating summary tables using the `Feeding.Summary.DFM` function.
+  - Summary tables are based on the transformed monitor data, and each table corresponds to a specific monitor.
+
+- **Storing Summary Tables:**
+  - The generated summary tables are stored in the `summary_tables` list, facilitating further examination or utilization.
+  
+```{r, results='hide', message=FALSE, warning=FALSE}
+# Initialize a list to store summary tables
+summary_tables <- list()
+
+# Loop through monitors and create summary tables
+for (i in 1:4) {
+  dfm_single <- get(paste0("dfm.single", i))
+  summary_tables[[i]] <- Feeding.Summary.DFM(dfm_single, range = c(5, 180), TransformLicks = FALSE)
+}
+```
+
+
+### 5. Table Processing
+
+- **Extracting Summary Tables**
+  - Extraction of summary tables for each monitor from the summary_tables list.
+  - Assignment of each summary table to individual variables (DFM1_summary to DFM4_summary).
+ 
+```{r, results='hide', message=FALSE, warning=FALSE}
+# Takes the summary table for the first monitor (Monitor One) from the summary_tables list and assigns it to a new variable named DFM1_summary.
+DFM1_summary <- summary_tables[[1]]
+DFM2_summary <- summary_tables[[2]]
+DFM3_summary <- summary_tables[[3]]
+DFM4_summary <- summary_tables[[4]]
+```
+
+
+### 6. Table Transformation
+
+- **Function Definition:** 
+  - The function `process_monitor_summary` is defined to process the summary of each monitor individually.
+  - It selects specific columns, such as "DFM," "Chamber," "Licks," "Events," and "MeanDuration."
+  - The factor variable "Chamber" is transformed using the `english` function and renamed as "Genotype" using the `recode_factor` function.
+  - The processed summary is returned.
+
+- **Processing Each Monitor:**
+  - The `process_monitor_summary` function is called for each monitor (`DFM1_summary` to `DFM4_summary`).
+  - Each monitor's summary is processed individually.
+
+```{r}
+# Function to Process Monitor Summary
+process_monitor_summary <- function(DFM_summary, monitor_name) {
+  # Select the desired columns
+  DFM_summary <- DFM_summary[c("DFM", "Chamber", "Licks", "Events", "MeanDuration")]
+ 
+  DFM_summary$Chamber <- as.character(english(DFM_summary$Chamber))
+  DFM_summary$Genotype <- recode_factor(DFM_summary$Chamber, one = "genotype", two = "genotype", three = "genotype", four = "genotype", five = "genotype", six = "genotype", seven = "genotype", eight = "genotype", nine = "genotype", ten = "genotype", eleven = "genotype", twelve = "genotype")
+
+# Code to write separate monitors data tables
+  # Write the summary to a CSV file
+  # file_name <- paste(monitor_name, "SummaryCondensed.csv", sep = "")
+  # write.csv(DFM_summary, file_name, row.names = FALSE)
+  
+  return(DFM_summary)
+}
+
+# Process each monitor's summary individually
+DFM1_summary <- process_monitor_summary(DFM1_summary, "DFM1")
+DFM2_summary <- process_monitor_summary(DFM2_summary, "DFM2")
+DFM3_summary <- process_monitor_summary(DFM3_summary, "DFM3")
+DFM4_summary <- process_monitor_summary(DFM4_summary, "DFM4")
+```
+
+
+### 7. Table Combination and Export
+
+- **Combined Results Data Frame:**
+  - An empty data frame (`combined_results`) is created to store the combined results.
+
+- **Appending Results:**
+  - The processed summaries for each monitor are appended to the `combined_results` data frame using `rbind`.
+
+- **Exporting Combined Results:**
+  - The combined results are written to a CSV file named "All_Monitors_Results.csv" using the `write.csv` function.
+  - The CSV file does not include row names.
+
+```{r}
+# Create an empty data frame to store the combined results
+combined_results <- data.frame()
+
+# Append the results to the combined data frame
+combined_results <- rbind(combined_results, DFM1_summary, DFM2_summary, DFM3_summary, DFM4_summary)
+
+# Write the combined results to a CSV file
+write.csv(combined_results, "All_Monitors_Results.csv", row.names = FALSE)
+```
+
