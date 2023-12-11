@@ -1,0 +1,94 @@
+---
+title: "Simple FLIC Output"
+author: "Kayla Audette"
+date: "2023-11-06"
+output: html_document
+---
+
+### 1. R Environment
+
+- **Setting Up Environment:**
+  - The first chunk configures the presentation options for the R code.
+  - It hides the code and result outputs, such as messages and warnings.
+  - The workspace is cleared to remove any existing variables or data.
+  - Essential libraries are loaded for data analysis and visualization.
+  
+- **Loading Directory and Attachments**
+  - The working directory is set to "~/Working Directory," where R will locate and save files.
+  - The ".FLICFunctions" data is attached, making its functions accessible for use.
+  
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+
+library(dplyr)
+library(readr)
+library(tidyr)
+
+setwd("~/Working Directory")
+```
+
+
+### 2. Data Processing
+
+- **Defining Data Frame:**
+  - This chunk is responsible for processing data from multiple CSV files.
+  - Creates an empty data frame `combined_results` to store the final results.
+  - Defines a list of CSV file names (`file_names`) to be processed.
+  - Iterates through each file, reading it into a data frame (`data`).
+  
+- **Constructing Data Frame**
+  - Analyzes 12 variables in each file, calculating counts above 20, first and last numbers for each variable.
+  - Constructs a data frame (`file_results`) for each file and appends it to the `combined_results`.
+  
+```{r, results='hide', message=FALSE, warning=FALSE}
+# Create an empty data frame to store the results
+combined_results <- data.frame()
+
+# List of CSV file names
+file_names <- c("DFM1_0.csv", "DFM2_0.csv", "DFM3_0.csv", "DFM4_0.csv")  # Add the names of your CSV files
+
+# Iterate through the list of file names
+for (file_name in file_names) {
+  # Read the CSV file into a data frame
+  data <- read.csv(file_name)
+  
+  # Create a list to store results for all 12 variables
+  results_list <- lapply(1:12, function(i) {
+    variable_name <- paste0("W", i)
+    column_to_analyze <- data[, variable_name]
+    count_above_20 <- sum(column_to_analyze > 20)
+    first_number <- column_to_analyze[1]
+    last_number <- column_to_analyze[length(column_to_analyze)]
+    data.frame(
+      File = file_name,  # Add a column to track the source file
+      Variable = variable_name,
+      CountAbove20 = count_above_20,
+      FirstNumber = first_number,
+      LastNumber = last_number
+    )
+  })
+
+  # Combine the results into a single data frame for this file
+  file_results <- do.call(rbind, results_list)
+  
+  # Append the results for this file to the combined_results data frame
+  combined_results <- rbind(combined_results, file_results)
+}
+```
+
+
+### 3. Results Display
+
+- **Exporting Results:**
+  - This chunk is responsible for displaying and saving the final results.
+  - Prints the `combined_results` data frame to the console.
+  - Saves the `combined_results` data frame to a CSV file named "Simple_Output.csv".
+  
+```{r, results='hide', message=FALSE, warning=FALSE}
+# Print the combined results
+print(combined_results)
+
+# Save the combined results to a single CSV file
+write.csv(combined_results, "Simple_Output.csv", row.names = FALSE)
+```
